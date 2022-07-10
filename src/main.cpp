@@ -3,10 +3,10 @@
 #include "color.h"
 #include "hittableList.h"
 #include "sphere.h"
+#include "camera.h"
 
 #include <iostream>
 
-#include <iostream>
 
 
 //！ 光线颜色
@@ -32,6 +32,8 @@ int main() {
     const int image_width = 400;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
 
+    const int samples_per_pixel = 100;
+
     // World
     // 定义一个击中表world
     hittable_list world;
@@ -39,20 +41,9 @@ int main() {
     world.add(make_shared<sphere>(point3(0, -100.5, -1), 100));// 增加一个球心[0 -100.5 -1],半径100 球体
 
     // Camera
-    // 视口
-    auto viewport_height = 2.0;// 高
-    auto viewport_width = aspect_ratio * viewport_height;// 宽
-    auto focal_length = 1.0;
-
-    auto origin = point3(0, 0, 0);// 起点 eye位置
-    // 坐标系的定义：
-    // x - 沿屏幕的宽度方向,从左向右为正
-    // y - 沿屏幕的高度方向，有下向上为正
-    // z - 右手笛卡尔坐标系定义， 从屏幕内指向外为正
-    auto horizontal = vec3(viewport_width, 0, 0);// 定义水平方向，也就是屏幕的宽度
-    auto vertical = vec3(0, viewport_height, 0);// 定义垂直方向，也就是屏幕的高度
-    // 窗口最左低处
-    auto lower_left_corner = origin - horizontal / 2 - vertical / 2 - vec3(0, 0, focal_length);
+    //     // Camera
+    camera cam;
+    
 
     // Render
     std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
@@ -60,15 +51,19 @@ int main() {
     for (int j = image_height - 1; j >= 0; --j) {
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
         for (int i = 0; i < image_width; ++i) {
-            auto u = double(i) / (image_width - 1);
-            auto v = double(j) / (image_height - 1);
-            // 定义一个光线
-            // lower_left_corner + u * horizontal + v * vertical 代表从屏幕左侧最低点+ 增量
-            // 减去 起点 即为方向
-            ray r(origin, lower_left_corner + u * horizontal + v * vertical - origin);// 起点+方向
-            color pixel_color = ray_color(r,world);
-            write_color(std::cout, pixel_color);
+            color pixel_color(0, 0, 0);
+            for (int s = 0; s < samples_per_pixel; ++s) {
+                auto u = (i + random_double()) / (image_width - 1);
+                auto v = (j + random_double()) / (image_height - 1);
+                // 定义一个光线
+                // lower_left_corner + u * horizontal + v * vertical 代表从屏幕左侧最低点+ 增量
+                // 减去 起点 即为方向
+                ray r = cam.get_ray(u, v);// 起点+方向
+                color pixel_color = ray_color(r, world);
+            }
+            write_color(std::cout, pixel_color, samples_per_pixel);
         }
+
     }
 
     std::cerr << "\nDone.\n";
